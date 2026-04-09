@@ -7,6 +7,13 @@ on:
     branches: [ main, master ]
 
 jobs:
+
+  # ─────────────────────────────────────────────────────────────────
+  # JOB: lint
+  # Analiza el código fuente con ESLint para detectar errores de
+  # sintaxis, malas prácticas y violaciones de las reglas TypeScript.
+  # Es el primer job en ejecutarse. Si falla, los demás jobs no corren.
+  # ─────────────────────────────────────────────────────────────────
   lint:
     name: ESLint
     runs-on: ubuntu-latest
@@ -22,11 +29,19 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
+        shell: bash
         run: npm ci
 
       - name: Run ESLint
+        shell: bash
         run: npm run lint
 
+  # ─────────────────────────────────────────────────────────────────
+  # JOB: test
+  # Ejecuta la suite completa de pruebas con Playwright en los tres
+  # navegadores principales: Chromium, Firefox y WebKit.
+  # Depende del job lint. El reporte HTML se sube como artefacto.
+  # ─────────────────────────────────────────────────────────────────
   test:
     name: Playwright Tests
     runs-on: ubuntu-latest
@@ -57,5 +72,44 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+  # ─────────────────────────────────────────────────────────────────
+  # JOB: e2e
+  # Ejecuta las pruebas End-to-End enfocadas en Chromium simulando
+  # flujos reales de usuario (navegación, clicks, formularios, etc.).
+  # Corre en paralelo con el job test. El reporte se sube como artefacto.
+  # ─────────────────────────────────────────────────────────────────
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E tests
+        run: npx playwright test --project=chromium
+
+      - name: Upload E2E report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: e2e-report
           path: playwright-report/
           retention-days: 30
