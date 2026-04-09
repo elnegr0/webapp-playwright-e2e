@@ -1,32 +1,39 @@
-name: API CI
-#on: [push, pull_request]
+name: Playwright Tests
 
 on:
   push:
-    paths:
-      - "src/**"
-      - "tests/**"
-      - ".github/workflows/playwright.yml"
-
-defaults:
-  run:
-    working-directory: ./api
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
 
 jobs:
   test:
+    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
       - name: Use Node.js 18.x
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18.x
           cache: "npm"
-          cache-dependency-path: api/package-lock.json
+          cache-dependency-path: package-lock.json
+
       - name: Install dependencies
-        shell: bash
-        run: npm install
-      - name: Run tests
-        shell: bash
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
         run: npm test
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
