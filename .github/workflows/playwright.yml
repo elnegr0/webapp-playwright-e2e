@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 18.x
           cache: "npm"
-          cache-dependency-path: /api/package-lock.json
+          cache-dependency-path: api/package-lock.json
       - name: Install dependencies
         shell: bash
         run: npm install
