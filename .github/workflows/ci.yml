@@ -41,6 +41,8 @@ jobs:
   # Ejecuta la suite completa de pruebas con Playwright en los tres
   # navegadores principales: Chromium, Firefox y WebKit.
   # Depende del job lint. El reporte HTML se sube como artefacto.
+  # Los browsers se cachean por versión de Playwright para evitar
+  # reinstalarlos en cada push.
   # ─────────────────────────────────────────────────────────────────
   test:
     name: Playwright Tests
@@ -61,8 +63,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
 
       - name: Run Playwright tests
         run: npm test
@@ -80,6 +94,8 @@ jobs:
   # Ejecuta las pruebas End-to-End enfocadas en Chromium simulando
   # flujos reales de usuario (navegación, clicks, formularios, etc.).
   # Corre en paralelo con el job test. El reporte se sube como artefacto.
+  # Los browsers se cachean por versión de Playwright para evitar
+  # reinstalarlos en cada push.
   # ─────────────────────────────────────────────────────────────────
   e2e:
     name: E2E Tests
@@ -100,8 +116,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
 
       - name: Run E2E tests
         run: npx playwright test --project=chromium
