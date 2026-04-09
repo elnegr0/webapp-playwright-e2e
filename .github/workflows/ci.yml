@@ -96,12 +96,32 @@ jobs:
   # Corre en paralelo con el job test. El reporte se sube como artefacto.
   # Los browsers se cachean por versión de Playwright para evitar
   # reinstalarlos en cada push.
+  # Levanta un contenedor de MongoDB staging (usuario: test / pass: test123)
+  # para que las pruebas usen una BD real aislada de producción.
   # ─────────────────────────────────────────────────────────────────
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: lint
+    services:
+      mongo-staging:
+        image: mongo:6.0
+        ports:
+          - 27018:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: test
+          MONGO_INITDB_ROOT_PASSWORD: test123
+          MONGO_INITDB_DATABASE: staging
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      NODE_ENV: staging
+      MONGO_URL: mongodb://test:test123@localhost:27018?retryWrites=true&writeConcern=majority&authSource=admin
+      MONGO_DB_NAME: staging
     steps:
       - name: Checkout
         uses: actions/checkout@v4
